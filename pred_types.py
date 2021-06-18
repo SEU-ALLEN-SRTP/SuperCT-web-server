@@ -14,6 +14,7 @@ from umap import UMAP
 timestr = time.strftime("%Y%m%d-%H%M%S")
 
 
+@st.cache(allow_output_mutation=True)
 def load_genes(genes_file, species):
     genes_used = pd.read_csv(genes_file, usecols=[0 if species == 'human' else 1], header=None).values.tolist()
     for i, g in enumerate(genes_used):
@@ -21,6 +22,7 @@ def load_genes(genes_file, species):
     return genes_used
 
 
+@st.cache(allow_output_mutation=True)
 def load_data(file, genes_used):
     # file can be an IO buffer or path
     data = pd.read_csv(file, header=0, index_col=0)
@@ -39,6 +41,7 @@ def load_data(file, genes_used):
     return data
 
 
+@st.cache(allow_output_mutation=True)
 def load_cell_types(types):
     cell_types = {}
     all_types = pd.read_csv(types)
@@ -76,28 +79,28 @@ def plot_histogram(res):
     st.pyplot(plt, bbox_inches='tight')
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def run_pca(df, n_comp=50):
     pca = PCA(n_components=n_comp)
     dr = pca.fit_transform(df.transpose())
     return dr
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def run_tsne(dr, n_comp=2):
     tsne = TSNE(n_components=n_comp)
     projections = tsne.fit_transform(dr)
     return projections
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def run_umap(dr, n_comp=2):
     umap = UMAP(n_components=n_comp)
     projections = umap.fit_transform(dr)
     return projections
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def plot_umap(df, res, as3d):
     dr = run_pca(df)
     projections = run_umap(dr, 3 if as3d else 2)
@@ -112,7 +115,7 @@ def plot_umap(df, res, as3d):
     return fig
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def plot_tsne(df, res):
     dr = run_pca(df)
     projections = run_tsne(dr)
@@ -124,32 +127,43 @@ def plot_tsne(df, res):
     return fig
 
 
+@st.cache(allow_output_mutation=True)
+def load_model_cache(use_model):
+    model = load_model('models/' + use_model)
+    return model
+
+
 def main():
     st.sidebar.title('SuperCT Web Server')
 
     st.title('Cell type mapping')
     st.text('Mapping your scRNA-seq data to cell types, with our neural network model.')
 
-    # input params
+    # side
+    st.sidebar.header('Data')
+    eg = st.sidebar.checkbox('Example: human')
+    upload = 'example/input_dge.human.csv' if eg else \
+        st.sidebar.file_uploader('Upload your DGE table', ['csv'],
+                                 help='differential gene expression table (csv), binary')
+    spc = st.sidebar.selectbox('Select the species of your data', ['human', 'mouse']) if not eg else 'human'
+    genes_used = load_genes('inthomgenes.csv', spc)
+
+    # page
     st.header('Options')
-    model = load_model('models/' + st.selectbox('Select a trained neural network model', ['v1_model.h5']))
+    use_model = st.selectbox('Select a trained neural network model', ['v1_model.h5'])
+    model = load_model_cache(use_model)
     cell_types = load_cell_types('models/' + st.selectbox('Select a label mapping', ['v1_id2type.csv']))
-    genes_used = load_genes('inthomgenes.csv', st.selectbox('Select the species of your data', ['human', 'mouse']))
+
     plot_hist = st.checkbox('Plot Cell Type Histogram', True)
     dr_umap = st.checkbox('View mapping results in UMAP', True)
     dr_tsne = st.checkbox('View mapping results in tSNE', False)
     plot3d_umap = st.checkbox('Enable 3D UMAP', True)
 
-
-    # input data
-    st.sidebar.header('Data')
-    upload = 'example/input_dge.human.csv' if st.sidebar.checkbox('Example: human') else \
-        st.sidebar.file_uploader('Upload your DGE table', ['csv'],
-                                 help='differential gene expression table (csv), binary')
     if upload is not None:
         data = load_data(upload, genes_used)
-        st.sidebar.write('First 20 rows and columns of your uploaded table...')
-        st.sidebar.dataframe(data.iloc[0:19, 0:19])
+        if eg:
+            st.sidebar.write('First 20 rows and 20 columns...')
+            st.sidebar.dataframe(data.iloc[0:19, 0:19])
         if st.button('Run Prediction'):
             with st.spinner("Running..."):
                 st.header('Results')
