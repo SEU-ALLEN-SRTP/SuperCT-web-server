@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import base64
 import time
 import plotly.express as px
-# from sklearn.manifold import TSNE
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 from umap import UMAP
+
 
 timestr = time.strftime("%Y%m%d-%H%M%S")
 
@@ -74,12 +76,31 @@ def plot_histogram(res):
     st.pyplot(plt, bbox_inches='tight')
 
 
-def plot_mapping(df, res, as3d):
-    features = df.transpose()
-    # tsne = TSNE(n_components=3 if as3d else 2, random_state=0)
-    umap = UMAP(n_components=3 if as3d else 2, init='random', random_state=0)
-    # projections = tsne.fit_transform(features)
-    projections = umap.fit_transform(features)
+@st.cache
+def run_pca(df, n_comp=50):
+    pca = PCA(n_components=n_comp)
+    dr = pca.fit_transform(df.transpose())
+    return dr
+
+
+@st.cache
+def run_tsne(dr, n_comp=2):
+    tsne = TSNE(n_components=n_comp)
+    projections = tsne.fit_transform(dr)
+    return projections
+
+
+@st.cache
+def run_umap(dr, n_comp=2):
+    umap = UMAP(n_components=n_comp)
+    projections = umap.fit_transform(dr)
+    return projections
+
+
+@st.cache
+def plot_umap(df, res, as3d):
+    dr = run_pca(df)
+    projections = run_umap(dr, 3 if as3d else 2)
     fig = px.scatter_3d(
         projections, x=0, y=1, z=2,
         color=res.pred_type, labels={'color': 'pred_type'}
@@ -88,7 +109,19 @@ def plot_mapping(df, res, as3d):
         color=res.pred_type, labels={'color': 'pred_type'}
     )
     fig.update_traces(marker_size=5)
-    st.plotly_chart(fig, use_container_width=True)
+    return fig
+
+
+@st.cache
+def plot_tsne(df, res):
+    dr = run_pca(df)
+    projections = run_tsne(dr)
+    fig = px.scatter(
+        projections, x=0, y=1,
+        color=res.pred_type, labels={'color': 'pred_type'}
+    )
+    fig.update_traces(marker_size=5)
+    return fig
 
 
 def main():
@@ -103,8 +136,11 @@ def main():
     cell_types = load_cell_types('models/' + st.selectbox('Select a label mapping', ['v1_id2type.csv']))
     genes_used = load_genes('inthomgenes.csv', st.selectbox('Select the species of your data', ['human', 'mouse']))
     plot_hist = st.checkbox('Plot Cell Type Histogram', True)
-    mapping_viewer = st.checkbox('View mapping results in UMAP', True)
-    plot3d = st.checkbox('Enable 3D', True)
+    dr_umap = st.checkbox('View mapping results in UMAP', True)
+    dr_tsne = st.checkbox('View mapping results in tSNE', False)
+    plot3d_umap = st.checkbox('Enable 3D UMAP', True)
+
+
     # input data
     st.sidebar.header('Data')
     upload = 'example/input_dge.human.csv' if st.sidebar.checkbox('Example: human') else \
@@ -124,10 +160,12 @@ def main():
                 if plot_hist:
                     with st.beta_expander('Cell type histogram', True):
                         plot_histogram(result_out)
-                if mapping_viewer:
+                if dr_umap:
                     with st.beta_expander('UMAP Plot', True):
-                        plot_mapping(data, result_out, plot3d)
-
+                        st.plotly_chart(plot_umap(data, result_out, plot3d_umap), use_container_width=True)
+                if dr_tsne:
+                    with st.beta_expander('tSNE Plot', True):
+                        st.plotly_chart(plot_tsne(data, result_out), use_container_width=True)
             st.subheader('Download')
             downloader(result_out.to_csv(index=False), "cell_type_prediction_{}.csv".format(timestr))
 
