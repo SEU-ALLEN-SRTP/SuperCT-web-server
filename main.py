@@ -8,16 +8,22 @@ from pages.StartPage import page as start_page
 from pages.PredictPage import page as predict_page
 
 
+@st.cache
+def load_sidebar_header():
+    with open('documentation/sidebar_header.md') as f:
+        out = f.read()
+    return out
+
+
 def main():
     st.set_page_config('SuperCT Web App', ":pizza:", "wide")
     state = _get_state()
     pages = {
-        "Home": start_page,
+        "Welcome Page": start_page,
         "Predict Cell Type": predict_page
     }
 
-    with open('documentation/sidebar_header.md') as f:
-        st.sidebar.markdown(f.read())
+    st.sidebar.markdown(load_sidebar_header())
     st.sidebar.markdown("---")
     st.sidebar.title(":ship: Navigation")
     page = st.sidebar.radio("Select your page", tuple(pages.keys()))

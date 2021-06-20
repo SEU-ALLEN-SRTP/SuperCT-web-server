@@ -1,4 +1,4 @@
-# SuperCT Web Server
+# 
 This web server implements the supervised classification of scRNA data algorithm, [SuperCT](https://github.com/weilin-genomics/SuperCT), powered by [Streamlit](https://streamlit.io
 ).
 
