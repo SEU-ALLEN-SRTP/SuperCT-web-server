@@ -151,11 +151,15 @@ def page(state):
     # side
     st.sidebar.header('Input Data')
     state.eg = st.sidebar.checkbox('Example: human', state.eg)
-    upload = 'example/input_dge.human.csv' if state.eg else \
+    state.predict_input = 'example/input_dge.human.csv' if state.eg else \
         st.sidebar.file_uploader('Upload your DGE table', ['csv'],
                                  help='differential gene expression table (csv), binary')
-    spc = st.sidebar.selectbox('Select the species of your data', ['human', 'mouse']) if not state.eg else 'human'
-    genes_used = load_genes('inthomgenes.csv', spc)
+    org_list = ['human', 'mouse']
+    state.predict_use_org = \
+        st.sidebar.selectbox('Select the species of your data', org_list,
+                             org_list.index(state.predict_use_org)
+                             if org_list.count(state.predict_use_org) > 0 else 0) if not state.eg else 'human'
+    genes_used = load_genes('inthomgenes.csv', state.predict_use_org)
 
     # page
 
@@ -185,14 +189,14 @@ def page(state):
             state.predict_submitted = True
 
     # data upload
-    if upload is not None:
-        data = load_data(upload, genes_used)
+    if state.predict_input is not None:
+        data = load_data(state.predict_input, genes_used)
         if state.eg:
             st.sidebar.write('First 20 rows and 20 columns...')
             st.sidebar.dataframe(data.iloc[0:19, 0:19])
 
     # results
-    if state.predict_submitted and upload and st.button('Run prediction'):
+    if state.predict_submitted and state.predict_input and st.button('Run prediction'):
         model_temp = load_model_from_path('models/' + state.use_model)
         model = load_model_from_mem(model_temp)
         cell_types = load_cell_types('models/' + state.use_map)
