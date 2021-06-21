@@ -6,7 +6,9 @@ from streamlit.server.server import Server
 # import pages
 from pages.welcome import page as start_page
 from pages.predict import page as predict_page
-from pages.train import page as train_page
+from pages.v1m_training import page as v1m_page
+from pages.v1h_training import page as v1h_page
+from pages.v2m_training import page as v2m_page
 
 
 @st.cache
@@ -22,7 +24,9 @@ def main():
     pages = {
         "Welcome Page": start_page,
         "Predict Cell Type": predict_page,
-        "Train Your Own Model": train_page
+        "Mode 1: v1m training": v1m_page,
+        "Mode 2: v1h training": v1h_page,
+        "Mode 3: v2m training": v2m_page,
     }
 
     st.sidebar.markdown(load_sidebar_header())

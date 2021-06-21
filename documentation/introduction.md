@@ -15,7 +15,7 @@ online without installing all the requirements, and returns fine plots for your 
 
 ---
 
-## Data format
+## Data Format
 
 For questions of how the input and output of the model should look like, 
 refer to the `example` data in this app or the github repo of SuperCT for more details. 
@@ -25,7 +25,7 @@ The examples are all binary, but you __can__ still upload numeric data because t
 __an inner binarization step__ before prediction and training, and __should__ if you want get
 a proper UMAP or tSNE map.
 
-### Input table:
+### Input Table:
 
 This is the kind of table that the model takes.
 Note that you can __upload a numeric__ one instead.
@@ -37,7 +37,7 @@ Note that you can __upload a numeric__ one instead.
 | Gene3  |   0   |   0   |   1   | ... |
 |   ...  |   ... |   ... |   ... | ... |
 
-### Output table:
+### Output Table:
 
 The prediction of the network is actually numeric, which means there should be a mapping table
 for you to turn the numbers into meaningful classes.

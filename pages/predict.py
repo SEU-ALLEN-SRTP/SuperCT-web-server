@@ -62,11 +62,11 @@ def predict_type(model, data, cell_types):
     return result_df
 
 
+@st.cache
 def downloader(text, fname):
     b64 = base64.b64encode(text.encode()).decode()
     label = fname.replace("_", r"\_")
-    href = f'<a href="data:file/csv;base64,{b64}" download="{fname}">{label}</a>'
-    st.markdown(href, unsafe_allow_html=True)
+    return f'<a href="data:file/csv;base64,{b64}" download="{fname}">{label}</a>'
 
 
 def plot_histogram(res):
@@ -145,8 +145,8 @@ def load_model_from_mem(buf):
 
 
 def page(state):
-    st.title('Cell type mapping')
-    st.text('Mapping your scRNA-seq data to cell types, with our neural network model.')
+    st.title('Cell Type Prediction :dart:')
+    st.markdown('Mapping your scRNA-seq data to cell types, with our neural network model.')
 
     # side
     st.sidebar.header('Input Data')
@@ -160,28 +160,27 @@ def page(state):
                              org_list.index(state.predict_use_org)
                              if org_list.count(state.predict_use_org) > 0 else 0) if not state.eg else 'human'
     genes_used = load_genes('inthomgenes.csv', state.predict_use_org)
+    st.sidebar.markdown('Gene features used by this organism:')
+    st.sidebar.markdown(downloader('\n'.join(genes_used), 'genes_used.txt'), unsafe_allow_html=True)
 
-    # page
+    # main
 
     # options
     st.header('Options')
+    st.markdown('This session remembers your choices on submission.')
     with st.form('Prediction'):
-        model_list = ['v1_model.h5']
-        mapping_list = ['v1_id2type.csv']
-        use_model = st.selectbox('Select a trained neural network model',
-                                 model_list,
-                                 model_list.index(state.use_model) if model_list.count(state.use_model) > 0 else 0)
-        use_map = st.selectbox('Select a label mapping',
-                               mapping_list,
-                               mapping_list.index(state.use_map) if mapping_list.count(state.use_map) > 0 else 0)
+        model_versions = ['v1m', 'v1h', 'v2m']
+        use_version = st.selectbox('Select a version of our pre-trained model:',
+                                   model_versions,
+                                   model_versions.index(state.use_version)
+                                   if model_versions.count(state.use_version) > 0 else 0)
         plot_hist = st.checkbox('Plot Cell Type Histogram', state.plot_hist)
         dr_umap = st.checkbox('View mapping results in UMAP', state.dr_umap)
         dr_tsne = st.checkbox('View mapping results in tSNE', state.dr_tsne)
         plot3d_umap = st.checkbox('Enable 3D UMAP', state.plot3d_umap)
         submitted = st.form_submit_button("Submit")
         if submitted:
-            state.use_model = use_model
-            state.use_map = use_map
+            state.use_version = use_version
             state.plot_hist = plot_hist
             state.dr_umap = dr_umap
             state.dr_tsne = dr_tsne
@@ -197,9 +196,9 @@ def page(state):
 
     # results
     if state.predict_submitted and state.predict_input and st.button('Run prediction'):
-        model_temp = load_model_from_path('models/' + state.use_model)
+        model_temp = load_model_from_path('models/' + use_version + '_model.h5')
         model = load_model_from_mem(model_temp)
-        cell_types = load_cell_types('models/' + state.use_map)
+        cell_types = load_cell_types('models/' + use_version + '_id2type.csv')
         st.header('Results')
         result_df = predict_type(model, data, cell_types)
         result_out = pd.DataFrame({'cell_id': data.columns, 'pred_type': result_df['pred_type']})
@@ -215,4 +214,5 @@ def page(state):
             with st.beta_expander('tSNE Plot', True):
                 st.plotly_chart(plot_tsne(data, result_out), use_container_width=True)
         st.subheader('Download')
-        downloader(result_out.to_csv(index=False), "cell_type_prediction_{}.csv".format(time_str))
+        st.markdown(downloader(result_out.to_csv(index=False), "cell_type_prediction_{}.csv".format(time_str)),
+                    unsafe_allow_html=True)
