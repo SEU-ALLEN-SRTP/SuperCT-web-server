@@ -5,7 +5,3 @@ _A web tool for scRNA data analysis._
 :white_check_mark: Supervised cell type prediction  
 :white_check_mark: Training the neural network model  
 :construction: Detecting gene modules  
-
-_Zuohan Zhao,  
-Southeast University,  
-Nanjing_

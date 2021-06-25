@@ -1,8 +1,9 @@
 import streamlit as st
 import base64
 import os
-import zipfile
+from zipfile import ZipFile
 import io
+
 
 @st.cache
 def load_train_guide():
@@ -12,21 +13,18 @@ def load_train_guide():
 
 
 @st.cache(allow_output_mutation=True)
-def download_app():
+def download_app(fname, dir):
     zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w') as zf:
-        for root, dirs, files in os.walk('TrainingApp'):
+    with ZipFile(zip_buffer, 'w') as zf:
+        for root, dirs, files in os.walk(dir):
             for file in files:
-                with open(os.path.join(root, file), 'br') as f:
-                    zf.writestr(f.read())
-    return zip_buffer
-
-    b64 = base64.b64encode(text.encode()).decode()
+                zf.write(os.path.join(root, file))
+    zip_buffer.seek(0)
+    b64 = base64.b64encode(zip_buffer.read()).decode()
     label = fname.replace("_", r"\_")
-    return f'<a href="data:file/csv;base64,{b64}" download="{fname}">{label}</a>'
+    return f'<a href="data:file/zip;base64,{b64}" download="{fname}">{label}</a>'
 
 
 def page(state):
     st.markdown(load_train_guide())
-    st.markdown(download_app(, "cell_type_prediction_{}.csv".format(time_str)),
-                    unsafe_allow_html=True)
+    st.markdown(download_app("training_app.zip", 'TrainingApp'), unsafe_allow_html=True)

@@ -1,132 +1,67 @@
-#%%
-
-import keras
-from keras import models, layers
-from keras.models import load_model
-import numpy as np
-import pandas as pd
-from sklearn.utils import shuffle
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.utils import class_weight
+from .utils import *
 from sklearn.model_selection import train_test_split
-import pickle
-import plotly
-import plotly.plotly as py
-
-## Load training data
-
-X_train, Y_train, genes = pickle.load(open('/Users/WLin/Documents/AI_projects/gaomingxuan/ref/v1_training_data.pkl', 'rb'))
-X_train = X_train.toarray()
-Y_train = Y_train.toarray()
-
-X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train, test_size=0.1, random_state=76)
-
-## Build model
-
-def build_model(input_num_genes, cell_type_num, customed_loss = "categorical_crossentropy"):
-    """建立线性神经网络模型
-    ----------------------------------------------
-    输入参数：
-    input_num_genes：表达矩阵的基因种类数
-    cell_type_num：预测的细胞种类数
-    输出：
-    神经网络模型
-    ----------------------------------------------
-    """
-    nn = models.Sequential()
-    nn.add(layers.Dense(200, activation = "relu", input_shape = (input_num_genes, )))
-    nn.add(layers.Dropout(0.4))
-    nn.add(layers.Dense(100, activation = "relu"))
-    nn.add(layers.Dropout(0.2))
-    nn.add(layers.Dense(cell_type_num, activation = "softmax"))
-    nn.compile(optimizer = "rmsprop", loss = customed_loss, metrics = ["accuracy"])
-    return nn
-
-def calc_class_weight(y):
-    my_class_weight = class_weight.compute_class_weight("balanced", np.unique(y), y)
-    return my_class_weight
-
-def plot_acc(history):
-    plt.scatter([i for i in range(1, len(history["acc"]) + 1)], history["acc"], label = "training_accuracy")
-    plt.plot([i for i in range(1, len(history["val_acc"]) + 1)], history["val_acc"], label = "validation_accuracy")
-    plt.legend()
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy")
-def plot_loss(history):
-    plt.scatter([i for i in range(1, len(history["loss"]) + 1)], history["loss"], label = "training_loss")
-    plt.plot([i for i in range(1, len(history["val_loss"]) + 1)], history["val_loss"], label = "validation_loss")
-    plt.legend()
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-
-def evaluate_one_type(model, type_name, total_dge, total_y, label_dict):
-    cell_index = [i for i,_ in enumerate(total_y) if _ == type_name]
-    type_index = label_dict[type_name]
-    y_test = np.zeros((len(cell_index), len(label_dict)))
-    y_test[:, type_index] = 1
-    X_test = total_dge.iloc[cell_index ,:].values
-    score = model.evaluate(X_test, y_test)
-    return len(cell_index), score
-
-def plot_test_score(test_cell_type, cell_nums, test_scores):
-    data = pd.DataFrame({"cell_type" : test_cell_type, "cell_num" : cell_nums, "test_score" : test_scores})
-    data = data.sort_values(by = ["test_score", "cell_num"])
-    plt.barh([i for i in range(1, len(test_cell_type) + 1)], data["test_score"])
-    str_cell_nums = [str(i) for i in data["cell_num"]]
-    plt.yticks([i for i in range(1, len(test_scores) + 1)], [i+ "(" +j + ")" for i,j in zip(data["cell_type"], str_cell_nums)])
-    plt.xlabel("Accuracy")
-    plt.ylabel("Cell type")
-    plt.title("Accuracy of each cell type")
-    return data
-
-def predict_one_type(model, type_name, total_dge, total_y, label_dict):
-    cell_index = [i for i,_ in enumerate(total_y) if _ == type_name]
-    type_index = label_dict[type_name]
-    y_test = np.zeros((len(cell_index), len(label_dict)))
-    y_test[:, type_index] = 1
-    X_test = total_dge.iloc[cell_index ,:].values
-    score = model.predict_classes(X_test)
-    return len(cell_index), score
-
-def save_label_dict(label_dict, file_name):
-    label_df = pd.DataFrame({"id" : list(label_dict.values()), "celltype" : list(label_dict.keys())})
-    label_df.index = label_df["id"]
-    label_df.drop("id", inplace = True, axis = 1)
-    label_df.to_csv(file_name)
-
-celltype_weights = calc_class_weight(np.argmax(Y_train, axis=1))
-# celltype_weights = calc_class_weight(np.argmax(Y_train.toarray(), axis=1))
-celltype_names = pd.read_csv('Data/MicroWell/id2type_news.csv', index_col=0)['celltype'].tolist()
-
-n_cells, n_genes = X_train.shape
-n_types = len(celltype_names)
-
-nn = build_model(n_genes, n_types)
-
-pickle.dump([genes, n_cells, n_genes, n_types, celltype_names], open('keras_parameters.pickle', 'wb'))
-
-## Training
-
-nn = build_model(n_genes, n_types)
-history = nn.fit(X_train, Y_train, epochs=10, batch_size=1024,
-                validation_split = 0.2, shuffle = True,
-                class_weight = celltype_weights)
 
 
-plot_acc(history.history)
+def page(state):
+    st.title('Training Mode 1: v1m')
+    with st.form('v1m_upload'):
+        st.header('Data Upload')
+        table_upload = st.file_uploader('Upload DGE table:', ['zip'],
+                                 help='gene by cell pandas table, as the input of the NN model, in pickle')
+        labels_upload = st.file_uploader('Upload cell type labels:', ['txt'],
+                               help='list of type labels for each cell, as the output of '
+                                    'the NN model, delimited by line feed')
+        data_submitted = st.form_submit_button('Submit data')
+        if data_submitted:
+            state.v1m_table = pd.read_pickle(table_upload, compression='zip')
+            state.v1m_labels = pd.read_table(labels_upload, header=None, index_col=None)
+            state.v1m_data_submitted = True
 
-plot_loss(history.history)
+    with st.form('v1m_options'):
+        st.header('Training Options')
+        test_size = st.slider('The ratio of the test set size:', 0.0, 1.0,
+                              state.v1m_test_size if state.v1m_test_size is not None else 0.1)
+        if_rand_state = st.checkbox('Use a specific random seed for test set splitting',
+                                    state.v1m_if_rand_state if state.v1m_if_rand_state is not None else True)
+        rand_state_num = st.number_input('Input the random seed for test set splitting:',
+                                         value=state.v1m_rand_state_num if state.v1m_rand_state_num is not None else 76)
+        epoch = st.number_input('Input the number of training epochs:', 1,
+                                value=state.v1m_epoch if state.v1m_epoch is not None else 10)
+        batch_size = st.number_input('Input the training batch size:', 1,
+                                     value=state.v1m_batch_size if state.v1m_batch_size is not None else 1024)
+        validation_split = st.number_input('Input the split rate for validation set:', 0.0, 1.0,
+                                           state.v1m_validation_split if
+                                           state.v1m_validation_split is not None else 0.2)
+        shuffle = st.checkbox('Shuffle the input data', state.v1m_shuffle if state.v1m_shuffle is not None else True)
+        opt_submitted = st.form_submit_button('Submit options')
+        if opt_submitted:
+            state.v1m_test_size = test_size
+            state.v1m_if_rand_state = if_rand_state
+            state.v1m_rand_state_num = rand_state_num
+            state.v1m_epoch = epoch
+            state.v1m_batch_size = batch_size
+            state.v1m_validation_split = validation_split
+            state.v1m_shuffle = shuffle
+            state.v1m_opt_submitted = True
 
-# Optimal training iteration
-optimal_epochs = 5
-
-nn = build_model(n_genes, n_types)
-history = nn.fit(X_train, Y_train, epochs=optimal_epochs, batch_size = 1024,
-                shuffle = True, class_weight = celltype_weights)
-
-nn.save("./model/v1_5r.h5")
-
-nn.evaluate(X_train, Y_train, batch_size=128, )
-
-nn.evaluate(X_test, Y_test, batch_size=128, )
+    if state.v1m_opt_submitted and st.button('Run'):
+        with st.spinner('Data processing...'):
+            cat_input, mapping = class_encode(state.v1m_labels.values)
+            X_train, X_test, Y_train, Y_test = train_test_split(state.v1m_table.values, cat_input)
+            cell_type_weights = calc_class_weight(np.argmax(Y_train, axis=1))
+            n_cells, n_genes = X_train.shape
+            n_types = len(cell_type_weights)
+            nn = build_model(n_genes, n_types)
+        emp1 = st.empty()
+        probar = st.progress(0.0)
+        with st.spinner('Training...'):
+            history = nn.fit(X_train, Y_train, epochs=state.v1m_epoch, batch_size=state.v1m_batch_size,
+                             validation_split=state.v1m_validation_split, shuffle=state.v1m_shuffle,
+                             class_weight=cell_type_weights,
+                             callbacks=[CustomCallback(emp1, probar, np.floor(n_cells / state.v1m_batch_size *
+                                                                              (1 - state.v1m_validation_split)))])
+        st.title('Results')
+        st.pyplot(plot_acc(history.history))
+        st.pyplot(plot_loss(history.history))
+        st.write(nn.evaluate(X_train, Y_train, batch_size=128))
+        st.write(nn.evaluate(X_test, Y_test, batch_size=128))

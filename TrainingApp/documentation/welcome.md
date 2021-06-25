@@ -37,8 +37,6 @@ Based on the v1m model, v1h model further takes in human PBMC dataset as for tra
 To change the output style of the v1m model, v2m training freezes the first hidden layer's parameters in v1m
 and change the output number from 30 to 38 before retraining.
 
-## Download Resources
-
 ---
 
 _Zuohan Zhao,  
