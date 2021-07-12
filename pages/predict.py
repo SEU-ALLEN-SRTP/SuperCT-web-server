@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from keras.models import load_model
+from tensorflow.python.keras.models import load_model
 import streamlit as st
 import matplotlib.pyplot as plt
 import base64
