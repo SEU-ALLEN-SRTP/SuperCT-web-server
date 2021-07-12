@@ -37,7 +37,7 @@ def load_data(file, genes_used):
         nonezero_df = pd.DataFrame(np.zeros((len(genes_not_found), data.shape[1])).astype('int64'))
         nonezero_df.columns = data.columns
         data = pd.concat([data, nonezero_df])
-        data = data.loc[genes_used, :]
+        data = data.loc[pd.Index(genes_used).intersection(data.index), :]
         print('Warning:', genes_not_found, ''' not found in your expression file,please check them. 
         But the prediction will go on by setting these genes with zero count.''')
     return data

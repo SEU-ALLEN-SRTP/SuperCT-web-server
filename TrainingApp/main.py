@@ -19,7 +19,7 @@ def load_sidebar_header():
 
 
 def main():
-    st.set_page_config('SuperCT Web App', ":pizza:", "wide")
+    st.set_page_config('SuperCT Web App', ":pizza:")
     state = _get_state()
     pages = {
         "Welcome Page": start_page,
