@@ -1,7 +1,7 @@
 FROM gpuci/miniconda-cuda:10.1-runtime-ubuntu18.04
 EXPOSE 8501
+COPY .condarc /root/.condarc
 WORKDIR /app
-COPY env.yml ./env.yml
-RUN conda env update -n base --file env.yml
+RUN conda install -y keras tensorflow==2.3.0 matplotlib pandas scikit-learn plotly && conda install -y -c conda-forge streamlit umap-learn
 COPY . .
 CMD streamlit run main.py
